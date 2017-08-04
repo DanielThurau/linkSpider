@@ -1,7 +1,7 @@
 # File Name: linkSpider/spider.py
-# Description: Use bfs/dfs to smartly explore all links 
-# avalible from a given start url. Needs to pass certain
-# conditions to be considerd a unique link to be explored.
+# Description: Use bfs to smartly explore all links on a 
+# given web application. Needs to pass certain
+# conditions to be considerd a unique link and explored.
 from lxml import html
 import requests
 import json
@@ -29,7 +29,8 @@ def getLinks(url):
 		print(base)
 	hrefs =  webpage.xpath('//a/@href')
 	links = webpage.xpath('//link/@href')
-	return (links + hrefs)
+	iframes = webpage.xpath('//iframe/@src')
+	return (links + hrefs + iframes)
 
 
 # def getSearch(url):
@@ -79,9 +80,9 @@ def addNeighbors(vertice, adj, neighborList):
 		# neighbor = neighbor.replace("../", "")
 		if(checkDomain(neighbor, global_allowed_domain)):
 
-			if "?" in neighbor and vertice[-1] != "/" and neighbor[0] != "/":
-				url = prune(vertice, "/")
-				neighbor = url + neighbor
+			# if "?" in neighbor and vertice[-1] != "/" and neighbor[0] != "/":
+			# 	url = prune(vertice, "/")
+			# 	neighbor = url + neighbor
 			if 'http' in neighbor:
 				adj[vertice].append(neighbor)
 			else:
@@ -116,7 +117,7 @@ def checkQ(url, adj):
 	if "?" in url:
 		newUrl = prune(url, "?")
 		if newUrl not in adj[url]:
-			adj[url].append(newUrl)
+			adj[url].append(newUrl[:-1])
 	return adj[url]
 
 def BFS(s, adj):
@@ -134,6 +135,7 @@ def BFS(s, adj):
 				adj[u] = [];
 				adj[u] = addNeighbors(u, adj, getLinks(u));
 				adj[u] = checkHop(u, adj)
+				adj[u] = checkQ(u, adj)
 				adj[u] = clean(adj[u])
 			for v in adj[u]:
 				if v not in level:
