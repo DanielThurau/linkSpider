@@ -11,8 +11,8 @@ import re
 # Adjacency list containing lists. 
 # Key: url. Value: list of 
 adj = {};
-count_unique_links = 1;
 
+# conditions of link in domain
 def checkDomain(url, domain):
 	if domain in url:
 		return True
@@ -21,52 +21,71 @@ def checkDomain(url, domain):
 	else:
 		return False
 
+def checkContain(vertice, neighbor):
+	popped = ""
+	if vertice[-1] == "/" or "?" not in neighbor:
+		return False
+
+	while True:
+		if vertice[-1] == "/":
+			break;
+		popped = vertice[-1] + popped
+		vertice = vertice[:-1]
+
+	if popped in neighbor:
+		return True
+
+
+
+
+# getLinks requests an html page using given url
+# and parses links from page
 def getLinks(url):
 	page = requests.get(url)
 	webpage = html.fromstring(page.content)
+
+	# different type of links to be reutrned
 	bases = webpage.xpath('//base/@href')
-	for base in bases:
-		print(base)
 	hrefs =  webpage.xpath('//a/@href')
 	links = webpage.xpath('//link/@href')
 	iframes = webpage.xpath('//iframe/@src')
-	return (links + hrefs + iframes)
+	actions = webpage.xpath('//form/@action')
 
+	return (links + hrefs + iframes + actions)
 
-# def getSearch(url):
-# 	page = requests.get(url)
-# 	webpage = html.fromstring(page.content)
-# 	items = webpage.xpath('//input/@type')
-# 	returnable = []
-# 	for item in items:
-# 		if returnable 
-
+# Sanitizes link after performing opearations. 
+# Removes any '../' and '//'
+# ignores and 'file://'
 def clean(links):
 	global global_start_url
+
 	newlinks = []
 	for link in links:
+		# Add to newlinks unchanged
 		if "file://" in link:
 			newlinks.append(link)
 			continue
+		# Replace direcotry changes
 		link = link.replace("../","")
 		link = link.replace("..","")
+
+		# If removing these chars changes the link to the 
+		# global_start_url, ignore
 		if link == global_start_url:
 			continue
+		# Remove any double slashes
 		if "//" in link:
 			for m in re.finditer('//', link):
 				if link[int(m.start()-1)] != ":":
 					link = link[:int(m.start())] + link[int(m.start()+1):]
+		# add the modifies url
 		newlinks.append(link)
 	return newlinks
 
-def addVertice(vertice, adj):
-	adj[vertice] = [];
-
-
+# Prune a url to deleimeter 
 def prune(url, delimeter):
 	while url[-1] != delimeter:
 		url = url[:-1]
-
 	return url;
 	
 
@@ -79,10 +98,13 @@ def addNeighbors(vertice, adj, neighborList):
 	for neighbor in neighborList:
 		# neighbor = neighbor.replace("../", "")
 		if(checkDomain(neighbor, global_allowed_domain)):
-
-			# if "?" in neighbor and vertice[-1] != "/" and neighbor[0] != "/":
-			# 	url = prune(vertice, "/")
-			# 	neighbor = url + neighbor
+			# print("		Adding neighbor: " + neighbor)
+			try:
+				if checkContain(vertice, neighbor):
+					base = prune(vertice, "/")
+					neighbor = base + neighbor
+			except IndexError:
+				pass
 			if 'http' in neighbor:
 				adj[vertice].append(neighbor)
 			else:
@@ -92,23 +114,34 @@ def addNeighbors(vertice, adj, neighborList):
 def checkHop(url, adj):
 	global global_start_url
 
-
+	# if url == global_start_url:
+	# 	return adj[url]
+	newList = []
 	for neighbor in adj[url]:
+		# try:
+		# 	if neighbor[-1] == "/":
+		# 		neighbor = neighbor[:-1]
+		# except IndexError:
+		# 	continue
+		# print("		checking hop on url: " + neighbor)
 		if "file://" in neighbor:
 			 continue
-		neighbor_ex = neighbor.split("/")
-		neighbor_ex = neighbor_ex[:-1]
-		neighbor_ex = "/".join(neighbor_ex) + "/"
-		neighbor_ex.strip()
-		while(neighbor_ex  != global_start_url):
-			if neighbor_ex not in adj[url]:
-				adj[url].append(neighbor_ex)
+		newURL = neighbor;
+		while True:
+			if newURL == global_start_url:
+				break
+			if newURL[-1] == "/":
+				newURL = prune(newURL[:-1],"/")
+			else:
+				newURL = prune(newURL,"/")
+			# print("			Pruned neighbor : " + newURL)
+			if newURL not in adj[url]:
+				# print(newURL)
+				newList.append(newURL)
+				if newURL != global_start_url:
+					newURL = newURL[:-1]
 
-			neighbor_ex = neighbor_ex.split("/")
-			neighbor_ex = neighbor_ex[:-1]
-			neighbor_ex = neighbor_ex[:-1]
-			neighbor_ex = "/".join(neighbor_ex) + "/"
-			neighbor_ex.strip()
+	adj[url] = adj[url]+newList
 	return adj[url]
 
 def checkQ(url, adj):
