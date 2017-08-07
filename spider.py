@@ -2,29 +2,24 @@
 # Description: Use bfs to smartly explore all links on a 
 # given web application. Needs to pass certain
 # conditions to be considerd a unique link and explored.
-from lxml import html
-import requests
-import json
-import re
+
+from lxml import html 		# HTML Parsers
+
+import json 				# Formats data in json format
+import re 					# Regular expression library
+import requests				# Performs HTML requests
 
 
-# Adjacency list containing lists. 
-# Key: url. Value: list of 
-adj = {};
-
-# conditions of link in domain
 def checkDomain(url, domain):
-	if domain in url:
+	if domain in url: # explicitly okay
 		return True
-	elif 'http' not in url:
+	elif 'http' not in url: # relative to root -> okay
 		return True
-	else:
+	else
 		return False
 
 def checkContain(vertice, neighbor):
 	popped = ""
-	if vertice[-1] == "/" or "?" not in neighbor:
-		return False
 
 	while True:
 		if vertice[-1] == "/":
@@ -34,6 +29,8 @@ def checkContain(vertice, neighbor):
 
 	if popped in neighbor:
 		return True
+	else:
+		return False
 
 
 
@@ -100,7 +97,7 @@ def addNeighbors(vertice, adj, neighborList):
 		if(checkDomain(neighbor, global_allowed_domain)):
 			# print("		Adding neighbor: " + neighbor)
 			try:
-				if checkContain(vertice, neighbor):
+				if vertice[-1] == "/" or "?" in neighbor and checkContain(vertice, neighbor):
 					base = prune(vertice, "/")
 					neighbor = base + neighbor
 			except IndexError:
@@ -187,17 +184,9 @@ def BFS(s, adj):
 global_start_url = "http://demo.testfire.net/"
 global_allowed_domain = "demo.testfire.net"
 
-
-
-# test = "http://demo.testfire.net/bank/ass"
-# print(test)
-# print(getVertice(test))
-
-# test2 = "http://demo.testfire.net/bank/"
-# print(test2)
-# print(getVertice(test2))
-
-
+# Adjacency list containing lists. 
+# Key: url. Value: list of 
+adj = {};
 
 
 hold = BFS(global_start_url, adj);
@@ -208,7 +197,7 @@ hold = BFS(global_start_url, adj);
 # # print(hold);
 print(len(hold));
 
-
+# Prints the key in the dictionary, which is the url
 for x in hold:
 	print(str(x))
 
