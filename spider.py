@@ -12,6 +12,44 @@ import re 					# Regular expression library
 import requests				# Performs HTML requests
 
 
+# return true if either is in there
+# return false if neither are
+# 2 cases , something like /bank, or /bank
+def checkContents(tup, searchable):
+	# print(tup)
+	if not tup:
+		return False
+	if(tup[0] == ""):
+		return False
+
+	if tup[0][0] == '/' and len(tup[0]) > 1:	# if /bank, first if becomes bank, second becomes /bank
+		toSearch = (tup[0][1:], tup[1])
+		if toSearch in searchable:
+			return True
+	elif tup[0][0] != '/':
+		toSearch = ('/' + tup[0], tup[1])
+		if toSearch in searchable:
+			return True
+	if tup in searchable: # if just bank, check that or /bank
+		return True
+
+	return False
+
+def checkContentSingle(tup, searchable):
+	if tup[0] == '/' and len(tup) > 1:	# if /bank, first if becomes bank, second becomes /bank
+		toSearch = tup[1:]
+		if toSearch in searchable:
+			return True
+	else:
+		toSearch = "/" + tup
+		if toSearch in searchable:
+			return True
+	if tup in searchable: # if just bank, check that or /bank
+		return True
+
+
+	return False
+
 def checkDomain(url, domain):
 	if domain in url: # explicitly okay
 		return True
@@ -77,11 +115,6 @@ def getLinks(url):
 	else:
 		getURL = url[0]
 
-	if url[0] == "/bank/ws.asmx":
-		print("***********look")
-
-		print(getURL);
-
 	page = requests.get(getURL)
 	webpage = html.fromstring(page.content)
 
@@ -99,7 +132,7 @@ def clean(links):
 	newlinks = []
 	for link in links:
 		# Add to newlinks unchanged
-		if "file://" in link[0] and link[0] not in newlinks:
+		if "file://" in link[0] and not checkContents(link, newlinks):
 			newlinks.append(link)
 			continue
 		# Replace direcotry changes
@@ -118,7 +151,7 @@ def clean(links):
 		# global_start_url, ignore
 		if link[0] == global_start_url or link[0] == "":
 			continue
-		elif link[0] not in newlinks:
+		elif not checkContents(link, newlinks):
 			newlinks.append(link)
 	return newlinks
 
@@ -140,7 +173,7 @@ def addNeighbors(vertice, adj, neighborList):
 
 		if(checkDomain(neighbor, global_allowed_domain)):
 			tup = (neighbor, vertice[0])
-			if neighbor not in adj[vertice]:
+			if not checkContents(neighbor, adj[vertice]):
 				adj[vertice].append(tup)
 	return adj[vertice]
 
@@ -161,7 +194,7 @@ def checkHop(url, adj):
 				newURL = prune(newURL[:-1],"/")
 			else:
 				newURL = prune(newURL,"/")
-			if (newURL, neighbor[1]) not in adj[url]:
+			if not checkContents((newURL, neighbor[1]), adj[url]):
 				newList.append((newURL,neighbor[1]))
 
 	adj[url] = adj[url]+newList
@@ -172,7 +205,7 @@ def checkQ(url, adj):
 
 	if "?" in url[0]:
 		newUrl = prune(url[0], "?")
-		if (newUrl,url[1]) not in adj[url]:
+		if not checkContents((newUrl,url[1]),adj[url]):
 			adj[url].append((newUrl[:-1],url[1]))
 	return adj[url]
 
@@ -200,7 +233,8 @@ def BFS(s, adj):
 				adj[u] = clean(adj[u])
 				# prettyPrint(adj[u])
 			for v in adj[u]:
-				if v[0] not in level:
+
+				if checkContentSingle(v[0], level) == False:
 					level[v[0]] = i
 					parent[v] = u
 					nextItem.append(v)
