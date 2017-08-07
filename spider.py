@@ -47,7 +47,20 @@ def checkContain(vertice, neighbor, depth=0):
 # getLinks requests an html page using given url
 # and parses links from page
 def getLinks(url):
-	page = requests.get(url)
+	global global_start_url
+
+	print(url)
+	if 'http' not in url[0]:
+		if url[0][0] != '/':
+			getURL = url[1] + url[0]
+		if url[0][0] == "/" and url[1] == global_start_url:
+			getURL = url[1][:-1] + url[0]
+
+
+	else:
+		getURL = url[0]
+
+	page = requests.get(getURL)
 	webpage = html.fromstring(page.content)
 
 	return (webpage.xpath('//base/@href') + webpage.xpath('//a/@href') \
@@ -95,7 +108,7 @@ def prune(url, delimeter):
 	
 
 def addNeighbors(vertice, adj, neighborList):
-	print(("Adding neighbors for vertice:" + vertice))
+	print(("Adding neighbors for vertice:" + vertice[0]))
 	global global_allowed_domain
 	global global_start_url
 
@@ -103,12 +116,9 @@ def addNeighbors(vertice, adj, neighborList):
 	for neighbor in neighborList:
 
 		if(checkDomain(neighbor, global_allowed_domain)):
-			# tup = tuple(neightbor, vertice)
-
-			if 'http' in neighbor and neighbor not in adj[vertice]:
-				adj[vertice].append(neighbor)
-			elif (global_start_url + neighbor) not in adj[vertice]:
-				adj[vertice].append(global_start_url + neighbor)
+			tup = (neighbor, vertice[0])
+			if neighbor not in adj[vertice]:
+				adj[vertice].append(tup)
 	return adj[vertice]
 
 # if there is a hidden directory, pop it
@@ -151,7 +161,7 @@ def checkQ(url, adj):
 
 def prettyPrint(neighbors):
 	for neighbor in neighbors:
-		print("		" + neighbor)
+		print("		" + neighbor[0])
 
 def BFS(s, adj):
 	# Global variable adjaceny list. Not built because of unknown data
@@ -191,8 +201,8 @@ global_allowed_domain = "demo.testfire.net"
 # Adjacency list containing lists. 
 # Key: url. Value: list of 
 adj = {};
-
-hold = BFS(global_start_url, adj);
+startLink = (global_start_url, "/")
+hold = BFS(startLink, adj);
 
 
 
