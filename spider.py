@@ -15,12 +15,14 @@ def checkDomain(url, domain):
 		return True
 	elif 'http' not in url: # relative to root -> okay
 		return True
-	else
+	else:
 		return False
 
+# Check if right most filename in vertice is in neighbor
 def checkContain(vertice, neighbor):
 	popped = ""
 
+	# Pop until '/' is reached
 	while True:
 		if vertice[-1] == "/":
 			break;
@@ -33,22 +35,16 @@ def checkContain(vertice, neighbor):
 		return False
 
 
-
-
 # getLinks requests an html page using given url
 # and parses links from page
 def getLinks(url):
 	page = requests.get(url)
 	webpage = html.fromstring(page.content)
 
-	# different type of links to be reutrned
-	bases = webpage.xpath('//base/@href')
-	hrefs =  webpage.xpath('//a/@href')
-	links = webpage.xpath('//link/@href')
-	iframes = webpage.xpath('//iframe/@src')
-	actions = webpage.xpath('//form/@action')
+	return (webpage.xpath('//base/@href') + webpage.xpath('//a/@href') \
+		+ webpage.xpath('//link/@href') + webpage.xpath('//iframe/@src') \
+		+ webpage.xpath('//form/@action'))
 
-	return (links + hrefs + iframes + actions)
 
 # Sanitizes link after performing opearations. 
 # Removes any '../' and '//'
@@ -96,12 +92,12 @@ def addNeighbors(vertice, adj, neighborList):
 		# neighbor = neighbor.replace("../", "")
 		if(checkDomain(neighbor, global_allowed_domain)):
 			# print("		Adding neighbor: " + neighbor)
-			try:
-				if vertice[-1] == "/" or "?" in neighbor and checkContain(vertice, neighbor):
-					base = prune(vertice, "/")
-					neighbor = base + neighbor
-			except IndexError:
-				pass
+			# try:
+			# 	if vertice[-1] == "/" or "?" in neighbor and checkContain(vertice, neighbor):
+			# 		base = prune(vertice, "/")
+			# 		neighbor = base + neighbor
+			# except IndexError:
+			# 	pass
 			if 'http' in neighbor:
 				adj[vertice].append(neighbor)
 			else:
