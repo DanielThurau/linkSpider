@@ -21,19 +21,22 @@ def checkDomain(url, domain):
 		return False
 
 # Check if right most filename in vertice is in neighbor
-def checkContain(vertice, neighbor, dist=0):
+def checkContain(vertice, neighbor, depth=0):
 	popped = ""
 
 	# Pop until '/' is reached
 
 	while True:
-		if vertice[-1] == "/":
-			dist = dist -1
-			if dist < 0:
+
+		if vertice[-1] == "/": # if char is '/' remove a depth level, 
+			depth = depth - 1
+			if depth < 0: # if deoth level is reached
 				break
-		if dist == 0:
+
+		if depth == 0:	# start adding to popped when depth level is allowed
 			popped = vertice[-1] + popped
-		vertice = vertice[:-1]
+
+		vertice = vertice[:-1] # Pop last char
 
 	if popped in neighbor:
 		return True
@@ -61,7 +64,7 @@ def clean(links):
 	newlinks = []
 	for link in links:
 		# Add to newlinks unchanged
-		if "file://" in link:
+		if "file://" in link and link not in newlinks:
 			newlinks.append(link)
 			continue
 		# Replace direcotry changes
@@ -80,7 +83,7 @@ def clean(links):
 		# global_start_url, ignore
 		if link == global_start_url:
 			continue
-		else:
+		elif link not in newlinks:
 			newlinks.append(link)
 	return newlinks
 
@@ -98,18 +101,13 @@ def addNeighbors(vertice, adj, neighborList):
 
 
 	for neighbor in neighborList:
-		# neighbor = neighbor.replace("../", "")
+
 		if(checkDomain(neighbor, global_allowed_domain)):
-			# print("		Adding neighbor: " + neighbor)
-			try:
-				if vertice[-1] == "/" or "?" in neighbor and checkContain(vertice, neighbor):
-					base = prune(vertice, "/")
-					neighbor = base + neighbor
-			except IndexError:
-				pass
-			if 'http' in neighbor:
+			# tup = tuple(neightbor, vertice)
+
+			if 'http' in neighbor and neighbor not in adj[vertice]:
 				adj[vertice].append(neighbor)
-			else:
+			elif (global_start_url + neighbor) not in adj[vertice]:
 				adj[vertice].append(global_start_url + neighbor)
 	return adj[vertice]
 
@@ -150,6 +148,11 @@ def checkQ(url, adj):
 			adj[url].append(newUrl[:-1])
 	return adj[url]
 
+
+def prettyPrint(neighbors):
+	for neighbor in neighbors:
+		print("		" + neighbor)
+
 def BFS(s, adj):
 	# Global variable adjaceny list. Not built because of unknown data
 	# global adj
@@ -164,9 +167,10 @@ def BFS(s, adj):
 			if u not in adj:
 				adj[u] = [];
 				adj[u] = addNeighbors(u, adj, getLinks(u));
-				adj[u] = checkHop(u, adj)
-				adj[u] = checkQ(u, adj)
-				adj[u] = clean(adj[u])
+				# adj[u] = checkHop(u, adj)
+				# adj[u] = checkQ(u, adj)
+				# adj[u] = clean(adj[u])
+				prettyPrint(adj[u])
 			for v in adj[u]:
 				if v not in level:
 					level[v] = i
