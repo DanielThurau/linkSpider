@@ -1,3 +1,7 @@
 linkSpider
 
+POC of spider
+
 Needed to create a spider that could verify burp Suites spider. First attempt was using scrapy, but could not effectivley create the spider to interact with unknown data and be smart enough to keep certain contexts throughout all the callback parsing. Second attempt will be using python html parser with bfs/dfs. Need to be extensible and to give the number of **unique** links within a certain domain provided.
+
+Hoping to make this into a c++ linkSpider using OOP which should reduce a lot of the code complexity. This will also let me redo project with more knowledge base on the actual problems that arise fron link crawling.
