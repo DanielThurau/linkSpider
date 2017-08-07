@@ -60,8 +60,10 @@ def getLinks(url):
 		if url[0][0] == '/' and url[1] != global_start_url:
 			if url[1][-1] != '/':
 				getURL = global_start_url + url[0]
+			elif url[1] in url[0]:
+				getURL = global_start_url + url[0]
 			else:
-				getURL = global_start_url + url[0] + url[1]
+				getURL = global_start_url + url[1] + url[0]
 		if url[0][0] != '/' and url[1] != global_start_url:
 			if url[0] == url[1]:
 				getURL = global_start_url + url[0]
@@ -74,6 +76,11 @@ def getLinks(url):
 
 	else:
 		getURL = url[0]
+
+	if url[0] == "/bank/ws.asmx":
+		print("***********look")
+
+		print(getURL);
 
 	page = requests.get(getURL)
 	webpage = html.fromstring(page.content)
@@ -154,7 +161,7 @@ def checkHop(url, adj):
 				newURL = prune(newURL[:-1],"/")
 			else:
 				newURL = prune(newURL,"/")
-			if newURL not in adj[url]:
+			if (newURL, neighbor[1]) not in adj[url]:
 				newList.append((newURL,neighbor[1]))
 
 	adj[url] = adj[url]+newList
