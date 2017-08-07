@@ -30,10 +30,14 @@ def checkContents(tup, searchable):
 		toSearch = ('/' + tup[0], tup[1])
 		if toSearch in searchable:
 			return True
+	
 	if tup in searchable: # if just bank, check that or /bank
 		return True
 
 	return False
+
+
+
 
 def checkContentSingle(tup, searchable):
 	if tup[0] == '/' and len(tup) > 1:	# if /bank, first if becomes bank, second becomes /bank
@@ -44,6 +48,7 @@ def checkContentSingle(tup, searchable):
 		toSearch = "/" + tup
 		if toSearch in searchable:
 			return True
+	
 	if tup in searchable: # if just bank, check that or /bank
 		return True
 
@@ -59,24 +64,23 @@ def checkDomain(url, domain):
 		return False
 
 # Check if right most filename in vertice is in neighbor
-def checkContain(vertice, neighbor, depth=0):
+def checkContain(parent, child, delim,depth=0):
 	popped = ""
 
 	# Pop until '/' is reached
-
 	while True:
-
-		if vertice[-1] == "/": # if char is '/' remove a depth level, 
+		if parent[-1] == delim: # if char is '/' remove a depth level, 
 			depth = depth - 1
 			if depth < 0: # if deoth level is reached
+				parent = parent[:-1] # Pop last char
 				break
 
 		if depth == 0:	# start adding to popped when depth level is allowed
-			popped = vertice[-1] + popped
+			child = parent[-1] + child
 
-		vertice = vertice[:-1] # Pop last char
+		parent = parent[:-1] # Pop last char
 
-	if popped in neighbor:
+	if popped in child:
 		return True
 	else:
 		return False
@@ -96,9 +100,14 @@ def getLinks(url):
 		if url[0][0] == '/' and url[1] == global_start_url:
 			getURL = url[1][:-1] + url[0]
 		if url[0][0] == '/' and url[1] != global_start_url:
-			if url[1][-1] != '/':
-				getURL = global_start_url + url[0]
+			if '?' in url[0] and '?' not in url[1] and checkContain(url[0], url[1], "?"):
+				temp = prune(url[0], "?")
+				whatiwant = url[0].replace(temp[:-1], "")
+				getURL = global_start_url + url[1] + whatiwant
+				url = (url[1] + whatiwant, url[1])
 			elif url[1] in url[0]:
+				getURL = global_start_url + url[0]
+			elif url[1][-1] != '/':
 				getURL = global_start_url + url[0]
 			else:
 				getURL = global_start_url + url[1] + url[0]
@@ -106,12 +115,15 @@ def getLinks(url):
 			if url[0] == url[1]:
 				getURL = global_start_url + url[0]
 			if url[0] != url[1]:
-				if url[1][-1] != '/':
+				if '?' in url[0] and '?' not in url[1] and checkContain(url[0], url[1], "?"):
+					temp = prune(url[0], "?")
+					whatiwant = url[0].replace(temp[:-1], "")
+					getURL = global_start_url + url[1] + whatiwant
+					url = (url[1] + whatiwant, url[1])
+				elif url[1][-1] != '/':
 					getURL = global_start_url + url[0]
 				else:
 					getURL = global_start_url + url[0] + url[1]
-
-
 	else:
 		getURL = url[0]
 
@@ -120,7 +132,7 @@ def getLinks(url):
 
 	return (webpage.xpath('//base/@href') + webpage.xpath('//a/@href') \
 		+ webpage.xpath('//link/@href') + webpage.xpath('//iframe/@src') \
-		+ webpage.xpath('//form/@action'))
+		+ webpage.xpath('//form/@action')), url
 
 
 # Sanitizes link after performing opearations. 
@@ -227,7 +239,13 @@ def BFS(s, adj):
 		for u in frontier:
 			if u not in adj:
 				adj[u] = [];
-				adj[u] = addNeighbors(u, adj, getLinks(u));
+				links, update = getLinks(u)
+
+				if update[0] not in level:
+					level[update[0]] = level[u[0]]
+					del level[u[0]]
+
+				adj[u] = addNeighbors(u, adj, links);
 				adj[u] = checkHop(u, adj)
 				adj[u] = checkQ(u, adj)
 				adj[u] = clean(adj[u])
@@ -242,9 +260,6 @@ def BFS(s, adj):
 		i = i + 1
 		print(i)
 	return level
-
-
-
 
 
 global_start_url = "http://demo.testfire.net/"
