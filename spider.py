@@ -49,12 +49,27 @@ def checkContain(vertice, neighbor, depth=0):
 def getLinks(url):
 	global global_start_url
 
-	print(url)
-	if 'http' not in url[0]:
-		if url[0][0] != '/':
+	# print(url)
+	if url[0] == "":
+		return []
+	elif 'http' not in url[0]:
+		if url[0][0] != '/' and url[1] == global_start_url:
 			getURL = url[1] + url[0]
-		if url[0][0] == "/" and url[1] == global_start_url:
+		if url[0][0] == '/' and url[1] == global_start_url:
 			getURL = url[1][:-1] + url[0]
+		if url[0][0] == '/' and url[1] != global_start_url:
+			if url[1][-1] != '/':
+				getURL = global_start_url + url[0]
+			else:
+				getURL = global_start_url + url[0] + url[1]
+		if url[0][0] != '/' and url[1] != global_start_url:
+			if url[0] == url[1]:
+				getURL = global_start_url + url[0]
+			if url[0] != url[1]:
+				if url[1][-1] != '/':
+					getURL = global_start_url + url[0]
+				else:
+					getURL = global_start_url + url[0] + url[1]
 
 
 	else:
@@ -77,32 +92,32 @@ def clean(links):
 	newlinks = []
 	for link in links:
 		# Add to newlinks unchanged
-		if "file://" in link and link not in newlinks:
+		if "file://" in link[0] and link[0] not in newlinks:
 			newlinks.append(link)
 			continue
 		# Replace direcotry changes
-		link = link.replace("../","")
-		link = link.replace("..","")
+		link = (link[0].replace("../",""), link[1])
+		link = (link[0].replace("..",""), link[1])
 
 		
 		# Remove any double slashes w/o removing ://
-		if "//" in link:
-			for m in re.finditer('//', link):
-				if link[int(m.start()-1)] != ":":
-					link = link[:int(m.start())] + link[int(m.start()+1):]
+		if "//" in link[0]:
+			for m in re.finditer('//', link[0]):
+				if link[0][int(m.start()-1)] != ":":
+					link = (link[0][:int(m.start())] + link[0][int(m.start()+1):],link[1])
 
 		# add the modifies url
 		# If removing these chars changes the link to the 
 		# global_start_url, ignore
-		if link == global_start_url:
+		if link[0] == global_start_url or link[0] == "":
 			continue
-		elif link not in newlinks:
+		elif link[0] not in newlinks:
 			newlinks.append(link)
 	return newlinks
 
 # Prune a url to deleimeter 
 def prune(url, delimeter):
-	while url[-1] != delimeter:
+	while len(url) > 0 and url[-1] != delimeter:
 		url = url[:-1]
 	return url;
 	
@@ -111,6 +126,7 @@ def addNeighbors(vertice, adj, neighborList):
 	print(("Adding neighbors for vertice:" + vertice[0]))
 	global global_allowed_domain
 	global global_start_url
+
 
 
 	for neighbor in neighborList:
@@ -127,11 +143,10 @@ def checkHop(url, adj):
 
 	newList = []
 	for neighbor in adj[url]:
-		# try:
-		if "file://" in neighbor:
+		if "file://" in neighbor[0]:
 			 continue
-		newURL = neighbor;
-		while True:
+		newURL = neighbor[0];
+		while len(newURL) > 0:
 			if newURL == global_start_url:
 				break
 
@@ -139,12 +154,8 @@ def checkHop(url, adj):
 				newURL = prune(newURL[:-1],"/")
 			else:
 				newURL = prune(newURL,"/")
-			# print("			Pruned neighbor : " + newURL)
 			if newURL not in adj[url]:
-				# print(newURL)
-				newList.append(newURL)
-				if newURL != global_start_url:
-					newURL = newURL[:-1]
+				newList.append((newURL,neighbor[1]))
 
 	adj[url] = adj[url]+newList
 	return adj[url]
@@ -152,10 +163,10 @@ def checkHop(url, adj):
 def checkQ(url, adj):
 	global global_start_url
 
-	if "?" in url:
-		newUrl = prune(url, "?")
-		if newUrl not in adj[url]:
-			adj[url].append(newUrl[:-1])
+	if "?" in url[0]:
+		newUrl = prune(url[0], "?")
+		if (newUrl,url[1]) not in adj[url]:
+			adj[url].append((newUrl[:-1],url[1]))
 	return adj[url]
 
 
@@ -167,7 +178,7 @@ def BFS(s, adj):
 	# Global variable adjaceny list. Not built because of unknown data
 	# global adj
 	# Level keeps track of how many steps it took to get to said node
-	level = {s: 0}
+	level = {s[0]: 0}
 	parent = {s : None}
 	i = 1;
 	frontier = [s]
@@ -177,13 +188,13 @@ def BFS(s, adj):
 			if u not in adj:
 				adj[u] = [];
 				adj[u] = addNeighbors(u, adj, getLinks(u));
-				# adj[u] = checkHop(u, adj)
-				# adj[u] = checkQ(u, adj)
-				# adj[u] = clean(adj[u])
-				prettyPrint(adj[u])
+				adj[u] = checkHop(u, adj)
+				adj[u] = checkQ(u, adj)
+				adj[u] = clean(adj[u])
+				# prettyPrint(adj[u])
 			for v in adj[u]:
-				if v not in level:
-					level[v] = i
+				if v[0] not in level:
+					level[v[0]] = i
 					parent[v] = u
 					nextItem.append(v)
 		frontier = nextItem
