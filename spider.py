@@ -1,3 +1,5 @@
+#!/usr/local/bin/python3
+
 # File Name: linkSpider/spider.py
 # Description: Use bfs to smartly explore all links on a 
 # given web application. Needs to pass certain
@@ -19,14 +21,18 @@ def checkDomain(url, domain):
 		return False
 
 # Check if right most filename in vertice is in neighbor
-def checkContain(vertice, neighbor):
+def checkContain(vertice, neighbor, dist=0):
 	popped = ""
 
 	# Pop until '/' is reached
+
 	while True:
 		if vertice[-1] == "/":
-			break;
-		popped = vertice[-1] + popped
+			dist = dist -1
+			if dist < 0:
+				break
+		if dist == 0:
+			popped = vertice[-1] + popped
 		vertice = vertice[:-1]
 
 	if popped in neighbor:
@@ -62,17 +68,20 @@ def clean(links):
 		link = link.replace("../","")
 		link = link.replace("..","")
 
-		# If removing these chars changes the link to the 
-		# global_start_url, ignore
-		if link == global_start_url:
-			continue
-		# Remove any double slashes
+		
+		# Remove any double slashes w/o removing ://
 		if "//" in link:
 			for m in re.finditer('//', link):
 				if link[int(m.start()-1)] != ":":
 					link = link[:int(m.start())] + link[int(m.start()+1):]
+
 		# add the modifies url
-		newlinks.append(link)
+		# If removing these chars changes the link to the 
+		# global_start_url, ignore
+		if link == global_start_url:
+			continue
+		else:
+			newlinks.append(link)
 	return newlinks
 
 # Prune a url to deleimeter 
@@ -92,37 +101,32 @@ def addNeighbors(vertice, adj, neighborList):
 		# neighbor = neighbor.replace("../", "")
 		if(checkDomain(neighbor, global_allowed_domain)):
 			# print("		Adding neighbor: " + neighbor)
-			# try:
-			# 	if vertice[-1] == "/" or "?" in neighbor and checkContain(vertice, neighbor):
-			# 		base = prune(vertice, "/")
-			# 		neighbor = base + neighbor
-			# except IndexError:
-			# 	pass
+			try:
+				if vertice[-1] == "/" or "?" in neighbor and checkContain(vertice, neighbor):
+					base = prune(vertice, "/")
+					neighbor = base + neighbor
+			except IndexError:
+				pass
 			if 'http' in neighbor:
 				adj[vertice].append(neighbor)
 			else:
 				adj[vertice].append(global_start_url + neighbor)
 	return adj[vertice]
 
+# if there is a hidden directory, pop it
 def checkHop(url, adj):
 	global global_start_url
 
-	# if url == global_start_url:
-	# 	return adj[url]
 	newList = []
 	for neighbor in adj[url]:
 		# try:
-		# 	if neighbor[-1] == "/":
-		# 		neighbor = neighbor[:-1]
-		# except IndexError:
-		# 	continue
-		# print("		checking hop on url: " + neighbor)
 		if "file://" in neighbor:
 			 continue
 		newURL = neighbor;
 		while True:
 			if newURL == global_start_url:
 				break
+
 			if newURL[-1] == "/":
 				newURL = prune(newURL[:-1],"/")
 			else:
@@ -183,7 +187,6 @@ global_allowed_domain = "demo.testfire.net"
 # Adjacency list containing lists. 
 # Key: url. Value: list of 
 adj = {};
-
 
 hold = BFS(global_start_url, adj);
 
